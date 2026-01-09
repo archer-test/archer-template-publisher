@@ -301,3 +301,6 @@ After generating scripts:
 - Mark them executable
 - Print their paths and intended usage
 - Stop and wait (do NOT deploy yet)
+
+
+FOR EVERY FEATURE AND CODE GENERATED, edit README.md file in root directory to include key feature updates, including rationale for methodologies used.
