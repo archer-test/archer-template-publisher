@@ -79,6 +79,8 @@ jobs:
           rm -rf target/docs
           rm -rf target/scripts
           rm -rf target/setup
+          rm -rf target/features
+          rm -rf target/.devcontainer
 
           # Copy directories if present in central repo
           if [ -d source/.github/workflows ]; then
@@ -134,6 +136,13 @@ jobs:
             echo "Copied dir: features"
           else
             echo "WARNING: source/features does not exist"
+          fi
+
+          if [ -d source/.devcontainer ]; then
+            cp -R source/.devcontainer target/.devcontainer
+            echo "Copied dir: .devcontainer"
+          else
+            echo "WARNING: source/.devcontainer does not exist"
           fi
 
       # 6) Commit if anything changed
