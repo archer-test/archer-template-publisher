@@ -129,6 +129,13 @@ jobs:
             echo "WARNING: source/CLAUDE.md (or source/claude.md) does not exist"
           fi
 
+          if [ -d source/features ]; then
+            cp -R source/features target/features
+            echo "Copied dir: features"
+          else
+            echo "WARNING: source/features does not exist"
+          fi
+
       # 6) Commit if anything changed
       - name: Commit changes (if any)
         id: commit
