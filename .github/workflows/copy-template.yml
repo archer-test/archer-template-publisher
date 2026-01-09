@@ -6,29 +6,22 @@ on:
       target_owner:
         description: "Owner/org of the target repo (e.g. archer-test)"
         required: true
-        type: string
       target_repo:
         description: "Target repo name only (e.g. import-template-test)"
         required: true
-        type: string
       target_branch:
         description: "Branch to update (default: main)"
         required: false
         default: "main"
-        type: string
       mode:
-        description: "pr (recommended) or push (direct to branch)"
+        description: "pr or push"
         required: false
         default: "pr"
-        type: choice
-        options:
-          - pr
-          - push
       pr_title:
         description: "PR title (if mode=pr)"
         required: false
         default: "chore: sync template content"
-        type: string
+
 
 jobs:
   publish:
