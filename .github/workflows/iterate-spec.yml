@@ -161,12 +161,12 @@ jobs:
           $CLEAN_SPEC
           EOF
 
-    BRANCH="spec/${ISSUE_NUMBER}-${SLUG}"
-    git checkout -b "$BRANCH"
-    git add "$FILE"
-    git config user.name "github-actions[bot]"
-    git config user.email "github-actions[bot]@users.noreply.github.com"
-    git commit -m "docs: add spec for #$ISSUE_NUMBER"
+          BRANCH="spec/${ISSUE_NUMBER}-${SLUG}"
+          git checkout -b "$BRANCH"
+          git add "$FILE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+    git commit -m docs: "add spec for #$ISSUE_NUMBER"
     git push origin "$BRANCH"
 
     gh pr create \
