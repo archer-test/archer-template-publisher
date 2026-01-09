@@ -1,0 +1,1 @@
+create a hello world web app using React and Supabase, the web app should track the number of times the site has been visited

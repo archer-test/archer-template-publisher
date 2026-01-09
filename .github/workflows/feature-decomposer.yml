@@ -12,13 +12,13 @@ permissions:
 jobs:
   decompose_feature:
     runs-on: ubuntu-latest
-    if: github.actor != 'github-actions[bot]' # Prevent loops
+    if: github.actor != 'github-actions[bot]'
     
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Important: fetch history to compare changes
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -31,7 +31,9 @@ jobs:
 
       - name: Run Decomposer Script
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # --- CHANGE 1: PASS THE PAT HERE ---
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Still needed for checking out code
+          ACTION_PAT: ${{ secrets.ACTION_PAT }}     # Needed for creating the issue
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           BEFORE_SHA: ${{ github.event.before }}
@@ -44,18 +46,19 @@ jobs:
           from github import Github
           from openai import OpenAI
 
-          # Initialize
-          g = Github(os.environ["GITHUB_TOKEN"])
+          # --- CHANGE 2: USE THE PAT TO LOGIN ---
+          # We use ACTION_PAT to initialize the Github client.
+          # This ensures that any Issue created by this script will TRIGGER other workflows.
+          g = Github(os.environ["ACTION_PAT"]) 
+          
           client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
           repo = g.get_repo(os.environ["GITHUB_REPOSITORY"])
 
           def get_changed_files():
               try:
-                  # Get list of changed files between the previous commit and current
                   before = os.environ.get("BEFORE_SHA", "HEAD^")
                   after = os.environ.get("AFTER_SHA", "HEAD")
                   
-                  # Handle new branch case (before is all zeros)
                   if before == "0000000000000000000000000000000000000000":
                       cmd = ["git", "ls-tree", "-r", "--name-only", "HEAD"]
                   else:
@@ -63,7 +66,6 @@ jobs:
                       
                   output = subprocess.check_output(cmd).decode("utf-8")
                   files = output.splitlines()
-                  # Filter for markdown files in features/ folder
                   return [f for f in files if f.startswith("features/") and f.endswith(".md")]
               except Exception as e:
                   print(f"Error finding files: {e}")
@@ -81,7 +83,7 @@ jobs:
               
               try:
                   response = client.chat.completions.create(
-                      model="gpt-4o", # or gpt-3.5-turbo
+                      model="gpt-4o",
                       messages=[{"role": "user", "content": prompt}],
                       response_format={"type": "json_object"}
                   )
@@ -92,8 +94,6 @@ jobs:
 
           def main():
               changed_files = get_changed_files()
-              print(f"Detected changes in: {changed_files}")
-
               if not changed_files:
                   print("No feature files found.")
                   return
@@ -101,26 +101,22 @@ jobs:
               for file_path in changed_files:
                   print(f"Processing {file_path}...")
                   try:
-                      # Read the file content
                       with open(file_path, 'r') as f:
                           content = f.read()
 
-                      # Get AI breakdown
                       result = parse_feature_with_ai(content)
                       
                       if result and 'issues' in result:
                           issues = result['issues']
-                          print(f"Creating {len(issues)} issues for {file_path}")
-                          
-                          # Create a tracking label (optional)
                           label_name = f"feat-{os.path.basename(file_path).replace('.md', '')}"
                           try:
                               repo.create_label(label_name, "0E8A16")
                           except:
-                              pass # Label might exist
+                              pass 
 
                           for issue_data in issues:
                               print(f"Creating issue: {issue_data['title']}")
+                              # This creation event will now trigger the Spec Architect!
                               repo.create_issue(
                                   title=issue_data['title'],
                                   body=f"{issue_data['body']}\n\n*Source: {file_path}*",
@@ -136,5 +132,4 @@ jobs:
               main()
           EOF
 
-          # Run the generated script
           python decompose.py
