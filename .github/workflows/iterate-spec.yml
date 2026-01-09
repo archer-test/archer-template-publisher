@@ -70,29 +70,29 @@ jobs:
           CURRENT_SPEC=$(echo "$SPEC_COMMENT" | jq -r '.body')
 
           PROMPT=$(cat <<'EOF'
-You are a senior engineer. You previously wrote a spec comment for a GitHub issue.
-Revise the spec based on the user's feedback below.
+          You are a senior engineer. You previously wrote a spec comment for a GitHub issue.
+          Revise the spec based on the user's feedback below.
 
-Rules:
-- Keep the same structure (Summary, Goals, Non-goals, Architecture/Approach, Implementation steps, Tech, Edge cases, Testing plan, Rollout, Open questions)
-- Incorporate feedback precisely.
-- If feedback is unclear, add clarifying questions in "Open questions".
-Return Markdown only.
-EOF
-)
+          Rules:
+          - Keep the same structure (Summary, Goals, Non-goals, Architecture/Approach, Implementation steps, Tech, Edge cases, Testing plan, Rollout, Open questions)
+          - Incorporate feedback precisely.
+          - If feedback is unclear, add clarifying questions in "Open questions".
+          Return Markdown only.
+          EOF
+          )
 
           INPUT=$(cat <<EOF
-Issue title: $TITLE
-Issue body:
-$BODY
+          Issue title: $TITLE
+          Issue body:
+          $BODY
 
-User feedback comment:
-$USER_FEEDBACK
+          User feedback comment:
+          $USER_FEEDBACK
 
-Current spec comment (may include an HTML marker at top):
-$CURRENT_SPEC
-EOF
-)
+          Current spec comment (may include an HTML marker at top):
+          $CURRENT_SPEC
+          EOF
+          )
 
           RESP=$(curl -sS https://api.openai.com/v1/responses \
             -H "Content-Type: application/json" \
@@ -113,14 +113,14 @@ EOF
           fi
 
           UPDATED=$(cat <<EOF
-$MARKER
-👋 Updated spec based on feedback. Reply **approved** when ready, or leave more comments.
+          $MARKER
+          👋 Updated spec based on feedback. Reply **approved** when ready, or leave more comments.
 
----
+          ---
 
-$NEW_SPEC
-EOF
-)
+          $NEW_SPEC
+          EOF
+          )
 
           gh api -X PATCH "repos/$REPO/issues/comments/$SPEC_COMMENT_ID" \
             -f body="$UPDATED"
@@ -154,23 +154,22 @@ EOF
 
           cat > "$PATH_OUT" <<EOF
 # Spec: $TITLE
+        Source: $REPO#$ISSUE_NUMBER
 
-Source: $REPO#$ISSUE_NUMBER
+          $CLEAN
+          EOF
 
-$CLEAN
-EOF
+  BR="spec/${ISSUE_NUMBER}-${SLUG}"
+  git checkout -b "$BR"
+  git add "$PATH_OUT"
+  git config user.name  "github-actions[bot]"
+  git config user.email "github-actions[bot]@users.noreply.github.com"
+  git commit -m "docs: add spec for #$ISSUE_NUMBER"
 
-          BR="spec/${ISSUE_NUMBER}-${SLUG}"
-          git checkout -b "$BR"
-          git add "$PATH_OUT"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "docs: add spec for #$ISSUE_NUMBER"
+  git push origin "$BR"
 
-          git push origin "$BR"
-
-          gh pr create \
-            --base main \
-            --head "$BR" \
-            --title "docs: spec for #$ISSUE_NUMBER" \
-            --body "Adds an approved spec for issue #$ISSUE_NUMBER."
+  gh pr create \
+    --base main \
+    --head "$BR" \
+    --title "docs: spec for #$ISSUE_NUMBER" \
+    --body "Adds an approved spec for issue #$ISSUE_NUMBER."
