@@ -156,10 +156,10 @@ jobs:
           cat > "$FILE" <<EOF
 # Spec: $TITLE
 
-Source issue: $REPO#$ISSUE_NUMBER
+        Source issue: $REPO#$ISSUE_NUMBER
 
-$CLEAN_SPEC
-EOF
+          $CLEAN_SPEC
+          EOF
 
           BRANCH="spec/${ISSUE_NUMBER}-${SLUG}"
           git checkout -b "$BRANCH"
