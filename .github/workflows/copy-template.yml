@@ -52,7 +52,7 @@ jobs:
             ${{ inputs.target_repo }}
 
       # 3) (Optional) Prove the token can see the target repo
-      - name: Debug: token can access target repo
+      - name: "Debug: token can access target repo"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
