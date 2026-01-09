@@ -1,6 +1,7 @@
 name: Publish template content to target repo
 
 on:
+  on:
   workflow_dispatch:
     inputs:
       target_owner:
