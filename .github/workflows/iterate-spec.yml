@@ -74,29 +74,29 @@ jobs:
 
           # NOTE: EOF terminators MUST be at column 1 (no leading spaces)
           cat > /tmp/prompt.txt <<'EOF'
-You are a senior engineer. You previously wrote a spec comment for a GitHub issue.
-Revise the spec based on the user's feedback below.
+          You are a senior engineer. You previously wrote a spec comment for a GitHub issue.
+          Revise the spec based on the user's feedback below.
 
-Rules:
-- Keep the same structure.
-- Incorporate feedback precisely.
-- If feedback is unclear, add clarifying questions in "Open questions".
-Return Markdown only.
-EOF
+          Rules:
+          - Keep the same structure.
+          - Incorporate feedback precisely.
+          - If feedback is unclear, add clarifying questions in "Open questions".
+          Return Markdown only.
+          EOF
 
-          cat > /tmp/input.txt <<EOF
-Issue title:
-$TITLE
+                    cat > /tmp/input.txt <<EOF
+          Issue title:
+          $TITLE
 
-Issue body:
-$BODY
+          Issue body:
+          $BODY
 
-User feedback:
-$USER_FEEDBACK
+          User feedback:
+          $USER_FEEDBACK
 
-Current spec:
-$CURRENT_SPEC
-EOF
+          Current spec:
+          $CURRENT_SPEC
+          EOF
 
           PROMPT="$(cat /tmp/prompt.txt)"
           INPUT="$(cat /tmp/input.txt)"
@@ -115,14 +115,14 @@ EOF
           fi
 
           UPDATED_BODY=$(cat <<EOF
-<!-- spec_comment_id:$SPEC_COMMENT_ID -->
-👋 Updated spec based on feedback. Reply **approved** when ready.
+          <!-- spec_comment_id:$SPEC_COMMENT_ID -->
+          👋 Updated spec based on feedback. Reply **approved** when ready.
 
----
+          ---
 
-$NEW_SPEC
-EOF
-)
+          $NEW_SPEC
+          EOF
+          )
 
           gh api -X PATCH "repos/$REPO/issues/comments/$SPEC_COMMENT_ID" \
             -f body="$UPDATED_BODY"
