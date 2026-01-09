@@ -1,0 +1,168 @@
+name: Publish folders/files to target repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: "Target repo in owner/name (e.g. my-org/my-new-repo)"
+        required: true
+        type: string
+      target_branch:
+        description: "Branch to update (default: main)"
+        required: false
+        default: "main"
+        type: string
+      mode:
+        description: "pr (recommended) or push (direct to branch)"
+        required: false
+        default: "pr"
+        type: choice
+        options:
+          - pr
+          - push
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout central repo (source of truth)
+      - name: Checkout source (central repo)
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Debug GH App secrets presence (safe)
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GH_APP_ID" ]; then
+            echo "GH_APP_ID is EMPTY or not available to this workflow"
+            exit 1
+          fi
+          if [ -z "$GH_APP_PRIVATE_KEY" ]; then
+            echo "GH_APP_PRIVATE_KEY is EMPTY or not available to this workflow"
+            exit 1
+          fi
+          echo "GH_APP_ID length: ${#GH_APP_ID}"
+          echo "GH_APP_PRIVATE_KEY length: ${#GH_APP_PRIVATE_KEY}"
+
+      # 2) Create a short-lived GitHub App installation token
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+      # 3) Checkout target repo (destination)
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.target_repo }}
+          ref: ${{ inputs.target_branch }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: target
+          persist-credentials: true
+
+      # 4) Copy the exact folders/files you listed
+      - name: Copy template content into target
+        run: |
+          set -euo pipefail
+
+          # Ensure target has the parent folders
+          mkdir -p target/.github
+
+          # Copy directories (replace target copies with source copies)
+          rm -rf target/.github/workflows
+          rm -rf target/docs
+          rm -rf target/scripts
+          rm -rf target/setup
+
+          if [ -d source/.github/workflows ]; then
+            mkdir -p target/.github
+            cp -R source/.github/workflows target/.github/workflows
+          else
+            echo "WARNING: source/.github/workflows does not exist"
+          fi
+
+          if [ -d source/docs ]; then
+            cp -R source/docs target/docs
+          else
+            echo "WARNING: source/docs does not exist"
+          fi
+
+          if [ -d source/scripts ]; then
+            cp -R source/scripts target/scripts
+          else
+            echo "WARNING: source/scripts does not exist"
+          fi
+
+          if [ -d source/setup ]; then
+            cp -R source/setup target/setup
+          else
+            echo "WARNING: source/setup does not exist"
+          fi
+
+          # Copy files
+          if [ -f source/.gitignore ]; then
+            cp source/.gitignore target/.gitignore
+          else
+            echo "WARNING: source/.gitignore does not exist"
+          fi
+
+          # Note: you wrote "claude.md" — file is usually "CLAUDE.md"
+          if [ -f source/CLAUDE.md ]; then
+            cp source/CLAUDE.md target/CLAUDE.md
+          elif [ -f source/claude.md ]; then
+            cp source/claude.md target/claude.md
+          else
+            echo "WARNING: source/CLAUDE.md (or source/claude.md) does not exist"
+          fi
+
+      # 5) Commit if anything changed
+      - name: Commit changes (if any)
+        id: commit
+        run: |
+          set -euo pipefail
+          cd target
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git status --porcelain | grep -q .; then
+            git add -A
+            git commit -m "chore: publish template content from central repo"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No changes to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 6a) Push directly (mode=push)
+      - name: Push to target branch (mode=push)
+        if: steps.commit.outputs.changed == 'true' && inputs.mode == 'push'
+        run: |
+          cd target
+          git push origin HEAD:${{ inputs.target_branch }}
+
+      # 6b) PR mode (recommended)
+      - name: Create PR (mode=pr)
+        if: steps.commit.outputs.changed == 'true' && inputs.mode == 'pr'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          cd target
+
+          BR="template-sync/${{ github.run_id }}"
+          git checkout -b "$BR"
+          git push -u origin "$BR"
+
+          gh pr create \
+            --repo "${{ inputs.target_repo }}" \
+            --base "${{ inputs.target_branch }}" \
+            --head "$BR" \
+            --title "chore: sync template content" \
+            --body "Automated sync from central template repository."
